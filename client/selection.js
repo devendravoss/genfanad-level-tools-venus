@@ -63,6 +63,24 @@ class Selection {
         this.cursor = new ModelSelection();
     }
 
+    setNPCMode(on_select) {
+        this.cancelSelection();
+
+        this.mode = 'npc';
+        this.on_select = on_select;
+
+        this.cursor = new ModelSelection();
+    }
+
+    setItemMode(on_select) {
+        this.cancelSelection();
+
+        this.mode = 'item';
+        this.on_select = on_select;
+
+        this.cursor = new ModelSelection();
+    }
+
     /* When we pick another tool, we have to clean up the BoxHelper around the selected model */
     removeSceneryCursor() {
         this.cursor.removeSelectedCursor();
@@ -126,7 +144,7 @@ class Selection {
     sceneryUp(e) {
         if (e.shiftKey) return; // Short circuit if camera moving.
         if (e.button === leftMouseButton) {
-            if (this.cursor && this.on_select) this.on_select(this.cursor.selection());
+            if (this.cursor && this.on_select) this.on_select(this.cursor.selection(), this.cursor);
         }
 
         this.cursor.selectModel();
@@ -173,6 +191,10 @@ class Selection {
             let height = this.terrain.heightAt(lx,ly);
 
             info += `(${lx},${ly}), elevation ${height.toFixed(4)} `;
+
+            if (WORKSPACES.attached_args) {
+                info += `, global (${WORKSPACES.attached_args.layer} ${WORKSPACES.attached_args.x * 128 + lx}, ${WORKSPACES.attached_args.y * 128 + ly})`;
+            }
 
             if (this.show_additional) {
                 this.default_cursor.setPosition(lx,ly, this.terrain.tileHeights(lx,ly));
@@ -242,6 +264,50 @@ class Selection {
                 }
 
                 this.modelHover(id, instance, intersections[0]);
+            } else if (this.mode == 'npc') {
+                this.parseMouseCoordinates(e);
+
+                this.ray.setFromCamera( this.mouse.clone(), SCENE.camera );
+                let groups = SCENE.getVisibleNPCs();
+                let intersections = this.ray.intersectObjects(groups, true);
+
+                let info = undefined, instance = undefined;
+
+                if (intersections.length > 0) {
+                    // traverse up to parent until it finds original grouping mesh
+                    let cur = intersections[0].object;
+                    while (cur && !instance) {
+                        if (cur.npc_info) {
+                            info = cur.npc_info;
+                            instance = cur;
+                        }
+                        cur = cur.parent;
+                    }
+                }
+
+                this.modelHover(info, instance, intersections[0]);
+            } else if (this.mode == 'item') {
+                this.parseMouseCoordinates(e);
+
+                this.ray.setFromCamera( this.mouse.clone(), SCENE.camera );
+                let groups = SCENE.getVisibleItems();
+                let intersections = this.ray.intersectObjects(groups, true);
+
+                let info = undefined, instance = undefined;
+
+                if (intersections.length > 0) {
+                    // traverse up to parent until it finds original grouping mesh
+                    let cur = intersections[0].object;
+                    while (cur && !instance) {
+                        if (cur.item_info) {
+                            info = cur.item_info;
+                            instance = cur;
+                        }
+                        cur = cur.parent;
+                    }
+                }
+
+                this.modelHover(info, instance, intersections[0]);
             } else if (this.terrain) {
                 this.parseMouseCoordinates(e);
                 this.ray.setFromCamera( this.mouse.clone(), SCENE.camera );

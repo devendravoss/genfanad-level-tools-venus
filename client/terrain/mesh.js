@@ -236,7 +236,7 @@ class MeshLoader {
             
                     let r = 128 + Math.floor(127 * flowX / WATER_ENCODE_RANGE);
                     let g = 128 + Math.floor(127 * flowY / WATER_ENCODE_RANGE);
-                    let b = Math.floor(255 * w.depth / 3.0);
+                    let b = Math.floor(255 * depth / 3.0);
 
                     tile.threeWaterColor = new THREE.Color(r / 255.0, g / 255.0, b / 255.0, 1.0);
                 } else {
@@ -263,6 +263,9 @@ class MeshLoader {
 
         let material;
         let map = this.textureManager.get(prefix + texture);
+        map.wrapS = THREE.RepeatWrapping;
+        map.wrapT = THREE.RepeatWrapping;
+
         if (window.DATA && texture == 'water.png') {
             material = createWaterShader(
                 //this.textureManager.get('uv.png')
@@ -298,22 +301,44 @@ class MeshLoader {
     
     // Figures out the neighbor vertex colors for t00.
     computeVertexColors(t00, t01, t10, t11) {
-        return {
-            "00": !t00.shadow ? t00.threeColor : t00.threeShadowColor,
-            "01": !t01.shadow ? t01.threeColor : t01.threeShadowColor,
-            "10": !t10.shadow ? t10.threeColor : t10.threeShadowColor,
-            "11": !t11.shadow ? t11.threeColor : t11.threeShadowColor,
-
-            "w00": t00.threeWaterColor,
-            "w01": t01.threeWaterColor,
-            "w10": t10.threeWaterColor,
-            "w11": t11.threeWaterColor,
-
-            // TODO: do we want texture coloring?
-            "t00": !t00.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
-            "t01": !t01.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
-            "t10": !t10.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
-            "t11": !t11.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
+        // BLEND MODE
+        if (t00.blend_colors) {
+            return {
+                "00": !t00.shadow ? t00.threeColor : t00.threeShadowColor,
+                "01": !t01.shadow ? t01.threeColor : t01.threeShadowColor,
+                "10": !t10.shadow ? t10.threeColor : t10.threeShadowColor,
+                "11": !t11.shadow ? t11.threeColor : t11.threeShadowColor,
+    
+                "w00": t00.threeWaterColor,
+                "w01": t01.threeWaterColor,
+                "w10": t10.threeWaterColor,
+                "w11": t11.threeWaterColor,
+    
+                // TODO: do we want texture coloring?
+                "t00": !t00.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
+                "t01": !t01.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
+                "t10": !t10.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
+                "t11": !t11.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
+            }
+        } else {
+            // Pixelated mode.
+            return {
+                "00": !t00.shadow ? t00.threeColor : t00.threeShadowColor,
+                "01": !t01.shadow ? t00.threeColor : t00.threeShadowColor,
+                "10": !t10.shadow ? t00.threeColor : t00.threeShadowColor,
+                "11": !t11.shadow ? t00.threeColor : t00.threeShadowColor,
+    
+                "w00": t00.threeWaterColor,
+                "w01": t01.threeWaterColor,
+                "w10": t10.threeWaterColor,
+                "w11": t11.threeWaterColor,
+    
+                // TODO: do we want texture coloring?
+                "t00": !t00.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
+                "t01": !t01.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
+                "t10": !t10.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
+                "t11": !t11.shadow ? TEXTURE_LIGHT : TEXTURE_SHADOW,
+            }
         }
     }
 
@@ -493,7 +518,7 @@ class MeshLoader {
             let pf = protofaces[type];
 
             // todo: add prefix walls/
-            let material = this.materialIndex(materials, materialMap, 'basic', type, 'buildings/');
+            let material = this.materialIndex(materials, materialMap, 'basic', type, 'buildings/walls/');
 
             for (let i in pf) {
                 let t0 = pf[i][0];
@@ -668,10 +693,10 @@ class MeshLoader {
                 // todo: add prefix roofs/
                 let topIndex = this.materialIndex(
                     materials, materialMap, 'basic', 
-                    tt.top, 'buildings/');
+                    tt.top, 'buildings/roofs/');
                 let sideIndex = this.materialIndex(
                     materials, materialMap, 'basic', 
-                    tt.side, 'buildings/');
+                    tt.side, 'buildings/roofs/');
 
                 // this is almost definitely wrong?
                 let flipFaces = false;
@@ -740,7 +765,7 @@ class MeshLoader {
                                 }
                             } else if (ecount == 3) {
                                 if (!e1) {
-                                    geometry.faceVertexUvs[0].push([uHalfLeft, u0, uHalf]);
+                                    geometry.faceVertexUvs[0].push([uHalf, u0, uHalfLeft]);
                                 } else {
                                     console.log("Sadness");
                                 }
@@ -774,7 +799,7 @@ class MeshLoader {
                                 }
                             } else if (ecount == 3) {
                                 if (!e3) {
-                                    geometry.faceVertexUvs[0].push([uHalf,uHalfLeft, u0]);
+                                    geometry.faceVertexUvs[0].push([uHalfLeft, uHalf, u0]);
                                 } else {
                                     console.log("Sadness");
                                 }

@@ -3,6 +3,10 @@
         <meta charset=utf-8>
         <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet"> 
+
         <link rel="stylesheet" href="/external/ide.css">
         <link rel="stylesheet" href="/external/easyui.css">
         <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
@@ -50,12 +54,16 @@
                     <input type='button' value='Undo' onclick='TOOLS.pickTool("editor", "undo")'>
                     <input type='button' value='Redo' onclick='TOOLS.pickTool("editor", "redo")'>
                     |
-                    <input id='file-reload' type='button' value='Reload' onclick='WORKSPACES.reload()' />
+                    <input id='hotkey-toggle' type='button' value='Disable Hotkeys' onclick='toggleHotkeys()' />
+                    <input id='reload-toggle' type='button' value='Disable Live Reload' onclick='toggleReload()' />
+                    |
+                    <input id='file-reload' type='button' value='Reload' onclick='WORKSPACES.reload(true)' />
                     Selected tool: <span id='tool-selected'>None</span>
                 </div>
             </div>
             <div data-options="region:'west',split:true" title="Maps" style="width:25%">
                 <div id='file-workspaces-view'>
+                    <div>Standalone Mode</div>
                     <div>
                         <input id='file-new' type='button' value='New' onclick='WORKSPACES.create()' />
                         <input id='file-open' type='button' value='Open...' onclick='WORKSPACES.open()' disabled />
@@ -67,6 +75,7 @@
                     </div>
                 </div>
                 <div id='file-attached-view'>
+                    <div>Attached Mode</div>
                     <div id='file-attached-location'>
                         <p>
                         Layer: <select id='file-attached-layer'>
@@ -76,23 +85,23 @@
                             <option value='dungeon'>Dungeon</option>
                             <option value='fairy'>Fae</option>
                             <option value='debug'>Debug</option>
+                            <option value='debug2'>Debug2</option>
+                            <option value='instance'>Instance</option>
                         </select>
                         X: <input id='file-attached-x' size=2 value='0' />
                         Y: <input id='file-attached-y' size=2 value='0' />
                         </p>
                         <p>
-                            <input id='file-attached-open' type='button' value='Load' />
+                            <input id='file-attached-open' type='button' value='Load' onclick='WORKSPACES.load_attached()' />
                         </p>
                     </div>
                     <div id='file-attached-navigation'>
                         <p>
                             Navigate:
-                            <input id='file-attached-navigate-N' type='button' value='N' />
-                            <input id='file-attached-navigate-S' type='button' value='S' />
-                            <input id='file-attached-navigate-E' type='button' value='E' />
-                            <input id='file-attached-navigate-W' type='button' value='W' />
-                            <input id='file-attached-navigate-UP' type='button' value='Up' />
-                            <input id='file-attached-navigate-DOWN' type='button' value='Down' />
+                            <input id='file-attached-navigate-N' type='button' value='N' onclick='WORKSPACES.move("N")'  />
+                            <input id='file-attached-navigate-S' type='button' value='S' onclick='WORKSPACES.move("S")' />
+                            <input id='file-attached-navigate-E' type='button' value='E' onclick='WORKSPACES.move("E")' />
+                            <input id='file-attached-navigate-W' type='button' value='W' onclick='WORKSPACES.move("W")' />
                         </p>
                     </div>
                     <div id='file-attached-tools'>
@@ -127,104 +136,148 @@
                                 </ul>
                             </li>
                             <li id='layer-npc'>NPC Spawns</li>
-                            <li id='layer-item'>Item Spawns</li>
+                            <li id='layer-item' checked>Item Spawns</li>
                             <li id='layer-water'>Water</li>
                         </ul>
                     </div>
                     <div id='tools-choice' data-options="region:'center', split:true" style="height:40%">
                         <div style="display: flex; margin: 5px 0;">
+                            <div class="custom-justify">
                             <span style="margin-right: 5px;">Camera:</span>
-                            <div>
                                 <div>
-                                    <input type='button' value='Move' class="button-group active" onclick='TOOLS.pickTool("default", "move", this)'>
-                                    <input type='button' value='Overhead' class="button-click" onclick='TOOLS.pickTool("default", "overhead", this)'>
-                                </div>
-                                <div>
-                                    <input type='button' value='Perspective' class="button-group-projection-mode active" onclick='TOOLS.pickTool("camera-projection", "perspective", this)'>
-                                    <input type='button' value='Orthographic' class="button-group-projection-mode inactive" onclick='TOOLS.pickTool("camera-projection", "orthographic", this)'>
+                                    <div>
+                                        <input type='button' value='Move' class="button-group active" onclick='TOOLS.pickTool("default", "move", this)'>
+                                        <input type='button' value='Overhead' class="button-click" onclick='TOOLS.pickTool("default", "overhead", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Perspective' class="button-group-projection-mode active" onclick='TOOLS.pickTool("camera-projection", "perspective", this)'>
+                                        <input type='button' value='Orthographic' class="button-group-projection-mode inactive" onclick='TOOLS.pickTool("camera-projection", "orthographic", this)'>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <input type='button' value='Model Editor' class="button-single" onclick='TOOLS.pickTool("default", "model_editor", this)'>
-                            <input type='button' value='Hotkeys' class="button-single" onclick='TOOLS.pickTool("default", "hotkeys", this)'>
+                            <div class="custom-justify">
+                                <input type='button' value='Model Editor' class="button-single" onclick='TOOLS.pickTool("default", "model_editor", this)'>
+                                <input type='button' value='Hotkeys' class="button-single" onclick='TOOLS.pickTool("default", "hotkeys", this)'>
+                            </div>
                         </div>
                         <div class="easyui-accordion">
                             <div title="Editor">
-                                <div>
-                                    <input type='button' value='Copy' class="button-group inactive" onclick='TOOLS.pickTool("editor", "copy", this)'>
-                                    <input type='button' value='Cut' class="button-group inactive" onclick='TOOLS.pickTool("editor", "cut", this)'>
-                                    <input type='button' value='Paste' class="button-group inactive" onclick='TOOLS.pickTool("editor", "paste", this)'>
-                                </div>
-                                <div>
-                                    Clipboard:
-                                    <input type='button' value='Save To' class="button-click" onclick='TOOLS.pickTool("editor", "save-clipboard", this)'>
-                                    <input type='button' value='Load From' class="button-click" onclick='TOOLS.pickTool("editor", "load-clipboard", this)'>
+                                <div class="custom-justify">
+                                    <div>
+                                        <input type='button' value='Copy' class="button-group inactive" onclick='TOOLS.pickTool("editor", "copy", this)'>
+                                        <input type='button' value='Cut' class="button-group inactive" onclick='TOOLS.pickTool("editor", "cut", this)'>
+                                        <input type='button' value='Paste' class="button-group inactive" onclick='TOOLS.pickTool("editor", "paste", this)'>
+                                        <input type='button' value='Paste (R)' class="button-group inactive" onclick='TOOLS.pickTool("editor", "paste-rotated", this)'>
+                                    </div>
+                                    <div>
+                                        Clipboard:
+                                        <input type='button' value='Save To' class="button-click" onclick='TOOLS.pickTool("editor", "save-clipboard", this)'>
+                                        <input type='button' value='Load From' class="button-click" onclick='TOOLS.pickTool("editor", "load-clipboard", this)'>
+                                    </div>
                                 </div>
                             </div>
                             <div title="Mesh">
-                                <div>
-                                    <input type='button' value='Save Color' class="button-click" onclick='TOOLS.pickTool("color", "save", this)'>
-                                    <input type='button' value='Load Color' class="button-click" onclick='TOOLS.pickTool("color", "load", this)'>
-                                </div>
-                                <div>
-                                    <input type='button' value='Load/Save Heightmap' class="button-group inactive" onclick='TOOLS.pickTool("height", "image", this)' />
-                                </div>
-                                <div>
-                                    <input type='button' value='Elevation Brush' class="button-group inactive" onclick='TOOLS.pickTool("height", "brush", this)'>
-                                </div>
-                                <div>
-                                    <input type='button' value='Toggle Unwalkable' class="button-group inactive" onclick='TOOLS.pickTool("height", "walkability", this)'>
-                                </div>
-                                <div>
-                                    <input type='button' value='Flatten Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "flatten-area", this)'>
+                                <div class="custom-justify">
+                                    <div>
+                                        <input type='button' value='Save Color' class="button-click" onclick='TOOLS.pickTool("color", "save", this)'>
+                                        <input type='button' value='Load Color' class="button-click" onclick='TOOLS.pickTool("color", "load", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Load/Save Heightmap' class="button-group inactive" onclick='TOOLS.pickTool("height", "image", this)' />
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Elevation Brush' class="button-group inactive" onclick='TOOLS.pickTool("height", "brush", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Save Collision Mask' class="button-click" onclick='TOOLS.pickTool("collision_mask", "save", this)'>
+                                        <input type='button' value='Load Collision Mask' class="button-click" onclick='TOOLS.pickTool("collision_mask", "load", this)'>
+                                        <input type='button' value='Toggle Collision' class="button-group inactive" onclick='TOOLS.pickTool("collision_mask", "toggle", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Flatten Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "flatten-area", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Clear Mesh' style='color:red;' class="button-click" onclick='TOOLS.pickTool("mesh", "clear", this)'>
+                                    </div>
                                 </div>
                             </div> 
+                            <div title="Weirder Mesh">
+                                <div class="custom-justify">
+                                    <p>Less commonly needed mesh editing tools.</p>
+                                    <div>
+                                        <input type='button' value='Save Render Mask' class="button-click" onclick='TOOLS.pickTool("render_mask", "save", this)'>
+                                        <input type='button' value='Load Render Mask' class="button-click" onclick='TOOLS.pickTool("render_mask", "load", this)'>
+                                        <input type='button' value='Toggle Rendering' class="button-group inactive" onclick='TOOLS.pickTool("render_mask", "toggle", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Save Orientation' class="button-click" onclick='TOOLS.pickTool("orientation", "save", this)'>
+                                        <input type='button' value='Load Orientation' class="button-click" onclick='TOOLS.pickTool("orientation", "load", this)'>
+                                        <input type='button' value='Toggle Orientation' class="button-group inactive" onclick='TOOLS.pickTool("orientation", "toggle", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Save Blend Mask' class="button-click" onclick='TOOLS.pickTool("blend_mask", "save", this)'>
+                                        <input type='button' value='Load Blend Mask' class="button-click" onclick='TOOLS.pickTool("blend_mask", "load", this)'>
+                                        <input type='button' value='Toggle Blend' class="button-group inactive" onclick='TOOLS.pickTool("blend_mask", "toggle", this)'>
+                                    </div>
+                                </div>
+                            </div>
                             <div title="Buildings">
-                                <div>
-                                    Floor: 
-                                    <input type='button' value='Tile' class="button-group inactive"  onclick='TOOLS.pickTool("building", "floor-tile", this)'>
-                                    <!--<input type='button' value='Line' class="button-group inactive" onclick='TOOLS.pickTool("building", "floor-line", this)'>-->
-                                    <input type='button' value='Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "floor-area", this)'>
-                                </div>
-                                <div>
-                                    Wall: 
-                                    <input type='button' value='Line' class="button-group inactive" onclick='TOOLS.pickTool("building", "wall-line", this)'>
-                                    <input type='button' value='Square' class="button-group inactive" onclick='TOOLS.pickTool("building", "wall-area", this)'>
-                                </div>
-                                <div>
-                                    Roof: 
-                                    <input type='button' value='Tile' class="button-group inactive" onclick='TOOLS.pickTool("building", "roof-tile", this)'>
-                                    <!--<input type='button' value='Line' class="button-group inactive" onclick='TOOLS.pickTool("building", "roof-line", this)'>-->
-                                    <input type='button' value='Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "roof-area", this)'>
-                                </div>
-                                <div>
-                                    <input type='button' value='Clear Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "clear-area", this)'>
-                                </div>
-                                <div>
-                                    <input type='button' value='Batch Edit' class="button-group inactive" onclick='TOOLS.pickTool("building", "batch", this)'>
+                                <div class="custom-justify">
+                                    <div>
+                                        Floor: 
+                                        <input type='button' value='Tile' class="button-group inactive"  onclick='TOOLS.pickTool("building", "floor-tile", this)'>
+                                        <!--<input type='button' value='Line' class="button-group inactive" onclick='TOOLS.pickTool("building", "floor-line", this)'>-->
+                                        <input type='button' value='Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "floor-area", this)'>
+                                    </div>
+                                    <div>
+                                        Wall: 
+                                        <input type='button' value='Line' class="button-group inactive" onclick='TOOLS.pickTool("building", "wall-line", this)'>
+                                        <input type='button' value='Square' class="button-group inactive" onclick='TOOLS.pickTool("building", "wall-area", this)'>
+                                    </div>
+                                    <div>
+                                        Roof: 
+                                        <input type='button' value='Tile' class="button-group inactive" onclick='TOOLS.pickTool("building", "roof-tile", this)'>
+                                        <!--<input type='button' value='Line' class="button-group inactive" onclick='TOOLS.pickTool("building", "roof-line", this)'>-->
+                                        <input type='button' value='Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "roof-area", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Clear Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "clear-area", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Raise Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "raise-area", this)'>
+                                        <input type='button' value='Lower Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "lower-area", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Batch Edit' class="button-group inactive" onclick='TOOLS.pickTool("building", "batch", this)'>
+                                    </div>
                                 </div>
                             </div>
                             <div title="Scenery">
-                                <div>
-                                    <input type='button' value='Select' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "select", this)'>
-                                </div>
-                                <div>
-                                    <input type='button' value='Place Tile' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "place", this)'>
-                                    <input type='button' value='Place Unique' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "place-unique", this)'>
-                                </div>
-                                <div>
-                                    <input type='button' value='Batch Edit' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "batch", this)'>
+                                <div class="custom-justify">
+                                    <div>
+                                        <input type='button' value='Select' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "select", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Place Tile' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "place", this)'>
+                                        <input type='button' value='Place Unique' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "place-unique", this)'>
+                                    </div>
+                                    <div>
+                                        <input type='button' value='Batch Edit' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "batch", this)'>
+                                    </div>
                                 </div>
                             </div>
                             <div title="NPCs/Items">
-                                <div>
-                                    <input disabled type='button' value='Select NPC' class="button-group inactive" onclick='TOOLS.pickTool("npc", "select", this)'>
-                                    <input disabled type='button' value='Place New NPC' class="button-group inactive" onclick='TOOLS.pickTool("npc", "place", this)'>
-                                </div>
-                                <div>
-                                    <input disabled type='button' value='Select Item' class="button-group inactive" onclick='TOOLS.pickTool("item", "select", this)'>
-                                    <input disabled type='button' value='Place New Item' class="button-group inactive" onclick='TOOLS.pickTool("item", "place", this)'>
+                                <div class="custom-justify">
+                                    <div>
+                                        <input id='tools-npc-select-button' disabled type='button' value='Select NPC' class="button-group inactive" onclick='TOOLS.pickTool("npc", "select", this)'>
+                                        <input id='tools-npc-place-button' disabled type='button' value='Place New NPC' class="button-group inactive" onclick='TOOLS.pickTool("npc", "place", this)'>
+                                    </div>
+                                    <div>
+                                        <input id='tools-item-select-button' type='button' value='Select Item' class="button-group inactive" onclick='TOOLS.pickTool("item", "select", this)'>
+                                        <input type='button' value='Place New Item' class="button-group inactive" onclick='TOOLS.pickTool("item", "place", this)'>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -239,11 +292,11 @@
                             </div>
                             <div id='tools-copy-list'>
                                 <p>
-                                    <input id='tools-copy-color' type='checkbox' checked />
+                                    <input id='tools-copy-color' type='checkbox' />
                                     <label for='tools-copy-color'>Color</label>
                                 </p>
                                 <p>
-                                    <input id='tools-copy-height' type='checkbox' checked />
+                                    <input id='tools-copy-height' type='checkbox' />
                                     <label for='tools-copy-height'>Height</label>
                                 </p>
                                 <p>
@@ -323,6 +376,9 @@
                                 Prefix: <input id='tools-detail-scenery-batch-prefix' value='skill-tree-'>
                             </div>
                             <div>
+                                Randomize: <input id='tools-detail-scenery-batch-prefix-randomize' value='$TREE'>
+                            </div>
+                            <div>
                                 <input type='button' value='Save Scenery' onclick='batchAction("scenery-save")' />
                                 <input type='button' value='Load Scenery' onclick='batchAction("scenery-load")' />
                             </div>
@@ -336,10 +392,11 @@
                         </div>
                         <div id='tools-detail-height-mesh' class='hidden'>
                             <div>
-                                This tool saves and loads the heightmap to a 'height.png' file in the workspace. Leave the numbers blank for default.
+                                <p>This tool saves and loads the heightmap to a 'height.png' file in the workspace. Leave the numbers blank for default.</p>
+                                <p>Note that a player is approximately 1.6 units high, and you don't want more than 3 units of variation within a single area.</p>
                             </div>
-                            <p>Low (0,0,0): <input id='tools-detail-height-low' value=''></p>
-                            <p>High (255,255,255): <input id='tools-detail-height-high' value=''></p>
+                            <p>Low: <input id='tools-detail-height-low' value=''> (black pixels set this value)</p>
+                            <p>High: <input id='tools-detail-height-high' value=''> (white pixels set this value)</p>
                             <div>
                                 <input type='button' value='Save Height' onclick='saveHeight()'>
                                 <input type='button' value='Load Height' onclick='loadHeight()'>
@@ -358,13 +415,14 @@
                         </div>
                         <div id='tools-detail-scenery-models' class='hidden'>
                             <div>
-                                Model: <select id='tools-detail-scenery-model-list' onchange='SCENERY_EDITOR.modelListChange()'></select>
+                                Model: <select width=30 id='tools-detail-scenery-model-list' onchange='SCENERY_EDITOR.modelListChange()'></select>
                                 <input type='button' value='...' onclick="MODEL_VISUAL.showDialog()">
                                 <input type='button' value='Erase' onclick="clearOption('tools-detail-scenery-model-list')">
                             </div>
                         </div>
                         <div id='tools-detail-scenery-selected' class='hidden'>
-                            <div>Selected: <span id='tools-detail-scenery-id'></span></div>
+                            <div>Selected: <span id='tools-detail-scenery-id'></span>
+                            <input type='button' value='F' onclick='TOOLS.pickTool("scenery", "center", this)' /></div>
                         </div>
                         <div id='tools-detail-scenery-customize' class='hidden'>
                             <div>Model: <span id='tools-detail-scenery-model'></span>
@@ -405,8 +463,36 @@
                         <div id='tools-detail-scenery-delete' class='hidden'>
                             <hr />
                             <div>
+                                <input type='button' style='color: red' value='Replace Model' onclick='SCENERY_EDITOR.modelSaveObject()'/>
+                                <input type='button' style='color: red' value='Save Rotation' onclick='SCENERY_EDITOR.modelSaveRotation()'/>
+                                <input type='button' style='color: red' value='Save Tint' onclick='SCENERY_EDITOR.modelSaveTint()'/>
+                            </div>
+                            <div>
                                 <input type='button' style='color: red' value='Delete' onclick='SCENERY_EDITOR.deleteModel()'/>
                             </div>
+                            <br />
+                            <div>
+                                <input type='button' value='Edit Definition' onclick='SCENERY_EDITOR.editDefinition()'/>
+                            </div>
+                        </div>
+                        <div id='tools-detail-npc-selected' class='hidden'>
+                            <div id='tools-detail-npc-selected-text'></div>
+                        </div>
+                        <div id='tools-detail-item-selected' class='hidden'>
+                            <div id='tools-detail-item-selected-text'></div>
+                        </div>
+                        <div id='tools-detail-npc-place' class='hidden'>
+                            <p>NPC ID: <select id='tools-detail-npc-place-list'></select></p>
+                            <p>Wander: <select id='tools-detail-npc-place-wander'>
+                                <option value='circle'>Circle</option>
+                                <option value='rect'>Rectangle</option>
+                            </select></p>
+                            <p>Count: <input id='tools-detail-npc-place-count' type='number' value=1></p>
+                        </div>
+                        <div id='tools-detail-item-place' class='hidden'>
+                            <p>NPC ID: <select id='tools-detail-item-place-list'></select></p>
+                            <p>Respawn Time: <input id='tools-detail-item-place-spawn_rate' type='number' value='400'></p>
+                            <p>Count: <input id='tools-detail-item-place-count' type='number' value=1></p>
                         </div>
                     </div>
                 </div>
@@ -484,8 +570,19 @@
                                 <option value="2x1" />2x1</option>
                                 <option value="3x1" />3x1</option>
                                 <option value="1x2" />1x2</option>
+                                <option value="1x3" />1x3</option>
                                 <option value="2x2" />2x2</option>
                                 <option value="2x3" />2x3</option>
+                                <option value="3x2" />3x2</option>
+                                <option value="2x4" />2x4</option>
+                                <option value="4x2" />4x2</option>
+                                <option value="3x3" />3x3</option>
+                                <option value="4x1" />4x1</option>
+                                <option value="1x4" />1x4</option>
+                                <option value="5x1" />5x1</option>
+                                <option value="1x5" />1x5</option>
+                                <option value="3x4" />3x4</option>
+                                <option value="4x3" />4x3</option>
                             </select>
                         </div>
                         <div>Resize:
@@ -540,6 +637,24 @@
                             <input type='button' value='Save' onclick="MODEL_EDITOR.saveChanges()">
                             <input type='button' value='Reset' onclick="MODEL_EDITOR.resetUI()">
                         </div>
+                        <div id="reparent-section" style="display:none">
+                            <hr />
+                            <div>
+                                New ID: <input id='model-dialog-controls-new-id' value=''/>
+                            </div>
+                            <div>
+                                TMP Section:
+                                <input type='button' value='gr-dec' onclick='MODEL_EDITOR.reparent("ground_decoration")'>
+                                <input type='button' value='pillar' onclick='MODEL_EDITOR.reparent("pillar")'>
+                                <input type='button' value='tile' onclick='MODEL_EDITOR.reparent("tile")'>
+                                <input type='button' value='unique' onclick='MODEL_EDITOR.reparent("unique")'>
+                                <input type='button' value='wa-dec' onclick='MODEL_EDITOR.reparent("wall_decoration")'>
+                                <input type='button' value='wa-str' onclick='MODEL_EDITOR.reparent("wall_structure")'>
+                                <input type='button' value='door' onclick='MODEL_EDITOR.reparent("door")'>
+                                <input type='button' value='doorframe' onclick='MODEL_EDITOR.reparent("door_frame")'>
+                            </div>
+                            <p id='model-dialog-controls-reparent'></p>
+                        </div>
                     </div>
                 </div>
                 <div data-options="region:'east',split:true" style="width:50%">
@@ -555,7 +670,7 @@
                     <p>
                         <input type='button' value='Reset Camera'  onclick="MODEL_EDITOR.resetCamera()" />
                     </p>
-                    <p><input id='model-dialog-select' type='button' value='Close and Select' style='color: white; background-color: green;' onclick="MODEL_EDITOR.selectAndClose()">(Shift+Enter)</p>
+                    <p><input id='model-dialog-select' type='button' value='Close and Select' style='color: black; background-color: mediumspringgreen; border-color: mediumspringgreen;' onclick="MODEL_EDITOR.selectAndClose()">(Shift+Enter)</p>
                 </div>
             </div>
                         </div>

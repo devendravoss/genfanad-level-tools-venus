@@ -15,9 +15,10 @@ class Scene {
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera( 75, w / h, 0.1, 1000 );
 
-        const directionalLight = new THREE.DirectionalLight( 0xffffff, 1.0 );
+        const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+        directionalLight.position.set( 10, 10, 0 );
         scene.add( directionalLight );
-        scene.add(new THREE.AmbientLight( 0x888888 ));
+        scene.add(new THREE.AmbientLight( 0x888888, 0.5 ));
 
         const renderer = new THREE.WebGLRenderer();
         this.renderer = renderer;
@@ -31,6 +32,11 @@ class Scene {
         this.camera = camera;
         this.renderer = renderer;
         this.controls = this.createControls(camera, renderer, 64, 20, 64);
+
+        addSprite(scene, 'n.png', 64, 20, -20);
+        addSprite(scene, 's.png', 64, 20, 148);
+        addSprite(scene, 'w.png', -20, 20, 64);
+        addSprite(scene, 'e.png', 148, 20, 64);
 
         SELECTION.init(renderer.domElement);
 
@@ -113,21 +119,21 @@ class Scene {
     }
 
     setNPCs(npcs) {
-        for (let i of ['layer-npcs']) {
+        for (let i of ['layer-npc']) {
             if (this.features[i] && this.features[i].visible) this.scene.remove(this.features[i].instance);
         }
 
-        this.features['layer-npcs'] = { visible: false, instance: npcs };
+        this.features['layer-npc'] = { visible: false, instance: npcs };
         this.updateLayerVisibility();
         this.loaded_npcs = npcs;
     }
 
     setItemSpawns(items) {
-        for (let i of ['layer-items']) {
+        for (let i of ['layer-item']) {
             if (this.features[i] && this.features[i].visible) this.scene.remove(this.features[i].instance);
         }
 
-        this.features['layer-items'] = { visible: false, instance: items };
+        this.features['layer-item'] = { visible: false, instance: items };
         this.updateLayerVisibility();
         this.loaded_items = items;
     }
@@ -138,6 +144,18 @@ class Scene {
             if (this.features[i] && this.features[i].visible) groups.push(this.features[i].instance);
         }
         return groups;
+    }
+
+    getVisibleNPCs() {
+        let f = this.features['layer-npc'];
+        if (f && f.visible) return [f.instance];
+        return [];
+    }
+
+    getVisibleItems() {
+        let f = this.features['layer-item'];
+        if (f && f.visible) return [f.instance];
+        return [];
     }
 
     frame() {
@@ -157,6 +175,17 @@ class Scene {
         cameraLookAt(this.camera, 132,77,132, 0,1,0, 64,32,64);
         this.controls = this.createControls(this.camera, this.renderer, 64, 20, 64);
     }
+
+    centerCameraOn(location, distance = 15) {
+        cameraLookAt(this.camera,
+            location.x + distance / 3.0, location.y + distance / 3.0, location.z + distance / 3.0,
+            0,1,0,
+            location.x, location.y, location.z
+        );
+
+        this.controls.target.set(location.x, location.y, location.z);
+        this.controls.update();
+    }
 }
 
 function cameraLookAt(camera, px, py, pz, ux, uy, uz, lx, ly, lz) {
@@ -169,6 +198,28 @@ function createCube(color) {
     var geometry = new THREE.BoxGeometry( 1, 1, 1 );
     var material = new THREE.MeshBasicMaterial( { wireframe: true, color: color } );
     return new THREE.Mesh( geometry, material );
+}
+
+function createSphere(color) {
+    var geometry = new THREE.SphereGeometry( 1, 32, 32);
+    var material = new THREE.MeshBasicMaterial( { wireframe: true, color: color } );
+    return new THREE.Mesh( geometry, material );
+}
+
+function createCylinder(color) {
+    var geometry = new THREE.CylinderGeometry( 1, 1, 32, 32);
+    var material = new THREE.MeshBasicMaterial( { wireframe: true, color: color } );
+    return new THREE.Mesh( geometry, material );
+}
+
+function addSprite(scene, texture, x,y,z) {
+    const map = new THREE.TextureLoader().load( texture );
+    const material = new THREE.SpriteMaterial( { map: map } );
+
+    const sprite = new THREE.Sprite( material );
+    sprite.position.set(x,y,z);
+    sprite.scale.set(10,10,10)
+    scene.add( sprite );
 }
 
 var SCENE = new Scene();

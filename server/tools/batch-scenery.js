@@ -82,7 +82,7 @@ async function readImage(workspace, image, rawPixels = false) {
 function KEY(x,y) { return x + ',' + y }
 
 function scenerySave(workspace, body) {
-    let objects = WORKSPACE.readJSON(workspace, 'objects.json');
+    let objects = WORKSPACE.readObjects(workspace);
 
     // index objects by x/y and filter out non-matching
     let indexed_objects = {};
@@ -120,7 +120,7 @@ function scenerySave(workspace, body) {
 }
 
 async function sceneryLoad(workspace, body) {
-    let objects = WORKSPACE.readJSON(workspace, 'objects.json');
+    let objects = WORKSPACE.readObjects(workspace);
     let metadata = WORKSPACE.getMetadata(workspace);
 
     let batch_metadata = WORKSPACE.readJSON(workspace, 'batch-scenery.json');
@@ -139,6 +139,21 @@ async function sceneryLoad(workspace, body) {
         original_keys[KEY(objects[i].x,objects[i].y)] = i;
     }
 
+    let randomize_tiles = [];
+    if (body.randomize == '$TREE') {
+        for (let i = 0; i < 9; i++) {
+            randomize_tiles.push('skill-tree-regular' + (i + 1));
+        }
+    } else {
+        let models = WORKSPACE.readModels(workspace);
+        let regexp = new RegExp(body.randomize);
+        for (let i in models) {
+            if (i.match(regexp)) {
+                randomize_tiles.push(i);
+            }
+        }
+    }
+
     let size = metadata.wSIZE;
     for (let x = 0; x < size; x++) {
         for (let y = 0; y < size; y++) {
@@ -149,8 +164,7 @@ async function sceneryLoad(workspace, body) {
 
             // Hack: Bright blue pixels turn into random trees.
             if (c == Jimp.rgbaToInt(0,0,255,255)) {
-                let r = Math.floor(Math.random() * 9) + 1;
-                lookup = 'skill-tree-regular' + r;
+                lookup = randomize_tiles[randInt(randomize_tiles.length)];
             }
 
             if (!lookup && existing) {
@@ -168,12 +182,12 @@ async function sceneryLoad(workspace, body) {
         }
     }
 
-    WORKSPACE.writeJSON(workspace, 'objects.json', objects);
+    WORKSPACE.writeObjects(workspace, objects);
     return true;
 }
 
 function tintSave(workspace, body) {
-    let objects = WORKSPACE.readJSON(workspace, 'objects.json');
+    let objects = WORKSPACE.readObjects(workspace);
 
     // index objects by x/y
     let indexed_objects = {};
@@ -194,7 +208,7 @@ function tintSave(workspace, body) {
 }
 
 async function tintLoad(workspace, body) {
-    let objects = WORKSPACE.readJSON(workspace, 'objects.json');
+    let objects = WORKSPACE.readObjects(workspace);
 
     undo.commandPerformed(workspace,{
         command: "Batch Tint",
@@ -215,12 +229,12 @@ async function tintLoad(workspace, body) {
         }
     }
 
-    WORKSPACE.writeJSON(workspace, 'objects.json', objects);
+    WORKSPACE.writeObjects(workspace, objects);
     return true;
 }
 
 function rotateRandomly(workspace, body) {
-    let objects = WORKSPACE.readJSON(workspace, 'objects.json');
+    let objects = WORKSPACE.readObjects(workspace);
 
     undo.commandPerformed(workspace,{
         command: "Rotate Randomly",
@@ -239,7 +253,7 @@ function rotateRandomly(workspace, body) {
         }
     }
 
-    WORKSPACE.writeJSON(workspace, 'objects.json', objects)
+    WORKSPACE.writeObjects(workspace, objects);
     return true;
 }
 
@@ -265,7 +279,7 @@ function generateLargeColorMap(workspace, mesh, metadata) {
 
 function groundSave(workspace, body) {
     let metadata = WORKSPACE.getMetadata(workspace);
-    let mesh = WORKSPACE.readJSON(workspace, 'mesh.json');
+    let mesh = WORKSPACE.readMesh(workspace);
 
     // generate the background for the tiled map
     generateLargeColorMap(workspace, mesh, metadata);
@@ -337,7 +351,7 @@ function groundSave(workspace, body) {
 
 function groundLoad(workspace, body) {
     let metadata = WORKSPACE.getMetadata(workspace);
-    let mesh = WORKSPACE.readJSON(workspace, 'mesh.json');
+    let mesh = WORKSPACE.readMesh(workspace);
 
     undo.commandPerformed(workspace,{
         command: "Batch Edit Floor",
@@ -374,7 +388,7 @@ function groundLoad(workspace, body) {
         }
     }
 
-    WORKSPACE.writeJSON(workspace, 'mesh.json', mesh);
+    WORKSPACE.writeMesh(workspace, mesh);
     return true;
 }
 

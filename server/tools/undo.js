@@ -25,9 +25,19 @@ function performUndo(workspace) {
         files: {}
     }
     console.log("Undoing " + command.command);
-    for (let i in command.files) {
-        invert.files[i] = JSON.parse(fs.readFileSync(WORKSPACE.getBasePath(workspace) + i));
-        fs.writeFileSync(WORKSPACE.getBasePath(workspace) + i, json(command.files[i]));
+    for (let type in command.files) {
+        let i = type;
+        if (type.startsWith('/')) {
+            i = type.substring(1).split('.')[0];
+        }
+
+        if (i == 'selection') {
+            invert.files[type] = WORKSPACE.getSelection(workspace);
+            WORKSPACE.writeSelection(workspace, command.files[type]);
+        } else {
+            invert.files[type] = WORKSPACE.readByKey(workspace, i);
+            WORKSPACE.writeByKey(workspace, i, command.files[type])    
+        }
     }
 
     if (log.redo.length > UNDO_HISTORY) log.redo.shift();
@@ -50,9 +60,20 @@ function performRedo(workspace) {
         files: {}
     }
     console.log("Redoing " + command.command);
-    for (let i in command.files) {
-        invert.files[i] = JSON.parse(fs.readFileSync(WORKSPACE.getBasePath(workspace) + i));
-        fs.writeFileSync(WORKSPACE.getBasePath(workspace) + i, json(command.files[i]));
+    for (let type in command.files) {
+        // strip the field
+        let i = type;
+        if (type.startsWith('/')) {
+            i = type.substring(1).split('.')[0];
+        }
+
+        if (i == 'selection') {
+            invert.files[type] = WORKSPACE.getSelection(workspace);
+            WORKSPACE.writeSelection(workspace, command.files[type]);
+        } else {
+            invert.files[type] = WORKSPACE.readByKey(workspace, i);
+            WORKSPACE.writeByKey(workspace, i, command.files[type])
+        }
     }
 
     if (log.undo.length > UNDO_HISTORY) log.undo.shift();

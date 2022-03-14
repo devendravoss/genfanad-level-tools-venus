@@ -104,8 +104,13 @@ class Workspaces {
         this.opened = undefined;
     }
 
-    openWorkspace(name) {
+    openWorkspace(name, attached_args) {
         if (this.opened == name) return;
+        if (attached_args) {
+            this.attached_args = attached_args;
+        } else {
+            delete this.attached_args;
+        }
         this._openWorkspace(name, (map) => {
             initUI(map.loadedArgs);
         });
@@ -117,8 +122,8 @@ class Workspaces {
             this.current_map = map;
             SCENE.setTerrain(map.terrain);
             SCENE.setObjects(map.scenery_groups);
-            SCENE.setNPCs(map.npcs);
-            SCENE.setItemSpawns(map.items);
+            SCENE.setNPCs(map.npc_group);
+            SCENE.setItemSpawns(map.item_group);
             SELECTION.setTerrain(map.terrain);
             MODEL_EDITOR.loadWorkspace(
                 map.sceneryLoader,
@@ -160,26 +165,97 @@ class Workspaces {
         console.log('TODO: open');
     }
 
-    reload() {
+    reload(bypass_global = false) {
+        if (!RELOAD_ENABLED && !bypass_global) return;
         this._openWorkspace(this.opened);
+    }
+
+    reloadMesh(){
+        MAPLOADER.getMesh((mesh) => {
+            let currentMesh = this.current_map.terrain
+            currentMesh = mesh
+            
+            SCENE.setTerrain(currentMesh)
+        })
+    }
+
+    reloadUniques(){
+        MAPLOADER.getUniques((uniques) => {
+            let currentGroups = this.current_map.scenery_groups;
+            let currentRef = this.current_map.unique_references;
+
+            currentGroups['unique'] = uniques.group;
+            currentRef = uniques.references;
+            
+            SCENE.setObjects(currentGroups)
+            SCENERY_EDITOR.uniques = uniques.references;
+        })
+    }
+
+    reloadObjects(){
+        MAPLOADER.getObjects((objects) =>{
+            let currentGroups = WORKSPACES.current_map.scenery_groups;
+            let currentRef = WORKSPACES.current_map.scenery_references;
+
+            currentGroups['trees'] = objects.group;
+            currentRef = objects.references;
+            SCENE.setObjects(currentGroups)
+        });
     }
 
     save() {
         console.log('TODO: save');
     }
 
+    load_attached() {
+        let layer = document.getElementById('file-attached-layer').value;
+        let x = Number(document.getElementById('file-attached-x').value);
+        let y = Number(document.getElementById('file-attached-y').value);
+
+        this.openWorkspace(layer + ':' + x + '_' + y, {layer, x, y});
+    }
+
+    move(dir) {
+        let x = document.getElementById('file-attached-x').value;
+        let y = document.getElementById('file-attached-y').value;
+
+        if (dir == 'N') {
+            document.getElementById('file-attached-y').value = Number(y) - 1;
+        }
+        if (dir == 'S') {
+            document.getElementById('file-attached-y').value = Number(y) + 1;
+        }
+        if (dir == 'E') {
+            document.getElementById('file-attached-x').value = Number(x) + 1;
+        }
+        if (dir == 'W') {
+            document.getElementById('file-attached-x').value = Number(x) - 1;
+        }
+
+        this.load_attached();
+    }
+
     init() {
         get('/api/workspaces/list', (data) => {
-            let list = document.getElementById('file-workspaces');
-            list.innerHTML = "";
-            for (let workspace of data) {
-                let e = document.createElement('li');
-                e.innerText = workspace;
-                list.appendChild(e);
+            if (data.attached) {
+                this.attached = true;
+                document.getElementById('file-attached-view').style.display = 'block';
+                document.getElementById('file-workspaces-view').style.display = 'none';
+
+                initAttachedMode();
+            } else {
+                this.attached = false;
+                let list = document.getElementById('file-workspaces');
+                list.innerHTML = "";
+                for (let workspace of data.workspaces) {
+                    let e = document.createElement('li');
+                    e.innerText = workspace;
+                    list.appendChild(e);
+                }
+                $('#file-workspaces').datalist({
+                    onSelect: (n,r) => this.openWorkspace(r.value)
+                });                
             }
-            $('#file-workspaces').datalist({
-                onSelect: (n,r) => this.openWorkspace(r.value)
-            });
         });
     }
 }

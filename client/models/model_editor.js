@@ -104,11 +104,39 @@ class Models {
             targetX = 3.0;
         } else if (dim == "1x2") {
             targetZ = 2.0;
+        } else if (dim == "1x3") {
+            targetZ = 3.0;
         } else if (dim == "2x2") {
             targetX = 2.0;
             targetZ = 2.0;
         } else if (dim == "2x3") {
             targetX = 2.0;
+            targetZ = 3.0;
+        } else if (dim == "3x2") {
+            targetX = 3.0;
+            targetZ = 2.0;
+        } else if (dim == "2x4") {
+            targetX = 2.0;
+            targetZ = 4.0;
+        } else if (dim == "4x2") {
+            targetX = 4.0;
+            targetZ = 2.0;
+        } else if (dim == "3x3") {
+            targetX = 3.0;
+            targetZ = 3.0;
+        } else if (dim == "4x1") {
+            targetX = 4.0;
+        } else if (dim == "1x4") {
+            targetZ = 4.0;
+        } else if (dim == "5x1") {
+            targetX = 5.0;
+        } else if (dim == "1x5") {
+            targetZ = 5.0;
+        } else if (dim == "3x4") {
+            targetX = 3.0;
+            targetZ = 4.0;
+        } else if (dim == "4x3") {
+            targetX = 4.0;
             targetZ = 3.0;
         }
     
@@ -140,7 +168,6 @@ class Models {
 
         this.textureSelect();
         this.resetUI();
-
     }
     
     loadAsset(id) {
@@ -297,6 +324,24 @@ class Models {
         } else if (this.selected_type == 'asset') {
             return this.asset_definition;
         }
+    }
+
+    reparent(category) {
+        this.uiChange();
+        let id = this.selected_model;
+        let new_id = document.getElementById('model-dialog-controls-new-id').value || "";
+        if (new_id.trim().length == 0) new_id = undefined;
+        let changes = this.local_changes;
+
+        document.getElementById('model-dialog-controls-reparent').innerText = 'reparenting...';
+        post('api/tools/scenery/definition/reparent/' + WORKSPACES.opened, {
+            id: id,
+            category: category,
+            changes: changes,
+            new_id: new_id
+        }, (r) => {
+            document.getElementById('model-dialog-controls-reparent').innerText = 'done ' + r;
+        });
     }
 
     saveChanges() {

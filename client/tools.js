@@ -37,7 +37,7 @@ const TOOL_DEFINITIONS = {
             }
         },
         'model_editor': {
-            hotkey: 'alt-shift-P',
+            hotkey: 'shift-@',
             name: "Open Model Editor",
             onClose(callback) {
                 this.onCloseCallback = callback;
@@ -47,7 +47,7 @@ const TOOL_DEFINITIONS = {
             }
         },
         'model_visual': {
-            hotkey: 'shift-P',
+            hotkey: 'shift-!',
             name: "Visual Model Editor",
             instant: () => {
                 MODEL_VISUAL.showDialog();
@@ -160,7 +160,7 @@ const TOOL_DEFINITIONS = {
             'tool-config': {
                 'tools-copy-choices': true,
             },
-            name: 'Cut',
+            name: 'Paste',
             select: 'fixed-area',
             hotkey: 'ctrl-V',
             init: () => {
@@ -187,6 +187,42 @@ const TOOL_DEFINITIONS = {
                 });
             }
         },
+        'paste-rotated': {
+            'tool-config': {
+                'tools-copy-choices': true,
+            },
+            name: 'Paste Rotated',
+            select: 'fixed-area',
+            init: () => {
+                get('api/tools/editor/selection/' + WORKSPACES.opened, (data) => {
+                    if (!data) {
+                        TOOLS.pickTool('default','move');
+                        return;
+                    }
+                    SELECTION.cursor.setDimensions(data.h, data.w);
+                });
+            },
+            on_select: (tile) => {
+                let layers = {};
+                for (let type of ['color', 'height', 'buildings', 'scenery']) {
+                    if (document.getElementById('tools-copy-' + type).checked)
+                        layers[type] = true;
+                }
+                post('api/tools/editor/paste-rotated/' + WORKSPACES.opened,{
+                    selection: tile,
+                    layers: layers,
+                }, () => {
+                    WORKSPACES.reload();
+                });
+            }
+        },
+    },
+    'mesh': {
+        'clear': {
+            instant: () => {
+                get('api/tools/mesh/clear/' + WORKSPACES.opened);
+            }
+        },
     },
     'color': {
         'save': {
@@ -197,6 +233,104 @@ const TOOL_DEFINITIONS = {
         'load': {
             instant: () => {
                 get('api/tools/mesh/color/load/' + WORKSPACES.opened, () => {
+                    WORKSPACES.reload();
+                });
+            }
+        },
+    },
+    'blend_mask': {
+        'save': {
+            instant: () => {
+                get('api/tools/mesh/blend_mask/save/' + WORKSPACES.opened);
+            }
+        },
+        'load': {
+            instant: () => {
+                get('api/tools/mesh/blend_mask/load/' + WORKSPACES.opened, () => {
+                    WORKSPACES.reload();
+                });
+            }
+        },
+        'toggle': {
+            'tool-config': {},
+            name: 'Toggle Blend Mode',
+            select: 'tile',
+            hotkey: 'shift-1',
+            on_select: (tile) => {
+                post('api/tools/mesh/blend_mask/toggle/' + WORKSPACES.opened, tile, () => {
+                    WORKSPACES.reload();
+                });
+            }
+        },
+    },
+    'collision_mask': {
+        'save': {
+            instant: () => {
+                get('api/tools/mesh/collision_mask/save/' + WORKSPACES.opened);
+            }
+        },
+        'load': {
+            instant: () => {
+                get('api/tools/mesh/collision_mask/load/' + WORKSPACES.opened, () => {
+                    WORKSPACES.reload();
+                });
+            }
+        },
+        'toggle': {
+            'tool-config': {},
+            name: 'Toggle Collision',
+            select: 'tile',
+            hotkey: 'shift-J',
+            on_select: (tile) => {
+                post('api/tools/mesh/collision_mask/toggle/' + WORKSPACES.opened, tile, () => {
+                    WORKSPACES.reload();
+                });
+            }
+        },
+    },
+    'orientation': {
+        'save': {
+            instant: () => {
+                get('api/tools/mesh/orientation/save/' + WORKSPACES.opened);
+            }
+        },
+        'load': {
+            instant: () => {
+                get('api/tools/mesh/orientation/load/' + WORKSPACES.opened, () => {
+                    WORKSPACES.reload();
+                });
+            }
+        },
+        'toggle': {
+            'tool-config': {},
+            name: 'Toggle Orientation',
+            select: 'tile',
+            on_select: (tile) => {
+                post('api/tools/mesh/orientation/toggle/' + WORKSPACES.opened, tile, () => {
+                    WORKSPACES.reload();
+                });
+            }
+        },
+    },
+    'render_mask': {
+        'save': {
+            instant: () => {
+                get('api/tools/mesh/render_mask/save/' + WORKSPACES.opened);
+            }
+        },
+        'load': {
+            instant: () => {
+                get('api/tools/mesh/render_mask/load/' + WORKSPACES.opened, () => {
+                    WORKSPACES.reload();
+                });
+            }
+        },
+        'toggle': {
+            'tool-config': {},
+            name: 'Toggle Rendering',
+            select: 'tile',
+            on_select: (tile) => {
+                post('api/tools/mesh/render_mask/toggle/' + WORKSPACES.opened, tile, () => {
                     WORKSPACES.reload();
                 });
             }
@@ -243,17 +377,6 @@ const TOOL_DEFINITIONS = {
                 });
             }
         },
-        'walkability': {
-            'tool-config': {},
-            name: 'Block Collision',
-            select: 'tile',
-            hotkey: 'shift-J',
-            on_select: (tile) => {
-                post('api/tools/mesh/height/toggle_walkability/' + WORKSPACES.opened, tile, () => {
-                    WORKSPACES.reload();
-                });
-            }
-        },
     },
     'building': {
         'batch': {
@@ -289,13 +412,13 @@ const TOOL_DEFINITIONS = {
                     shape: shape,
                     type: type
                 }, () => {
-                    WORKSPACES.reload();
+                    WORKSPACES.reloadMesh();
                 });
             }
         },
         'floor-tile-select': {
             name: "Floors - Select Texture",
-            hotkey: 'ctrl-shift-F',
+            hotkey: 'shift-#',
             instant: () => {
                 TEXTURE_SELECTION.openBuildingSelection('tools-detail-buildings-floor-list');
             }
@@ -347,7 +470,7 @@ const TOOL_DEFINITIONS = {
                     shape: shape,
                     type: type
                 }, () => {
-                    WORKSPACES.reload();
+                    WORKSPACES.reloadMesh();
                 });
             }
         },
@@ -368,7 +491,7 @@ const TOOL_DEFINITIONS = {
                     level: level,
                     type: type
                 }, () => {
-                    WORKSPACES.reload();
+                    WORKSPACES.reloadMesh();
                 });
             }
         },
@@ -389,13 +512,13 @@ const TOOL_DEFINITIONS = {
                     level: level,
                     type: type
                 }, () => {
-                    WORKSPACES.reload();
+                    WORKSPACES.reloadMesh();
                 });
             }
         },
         'wall-texture-select': {
             name: "Walls - Select Texture",
-            hotkey: 'ctrl-shift-W',
+            hotkey: 'shift-$',
             instant: () => {
                 TEXTURE_SELECTION.openBuildingSelection('tools-detail-buildings-wall-list');
             }
@@ -423,13 +546,13 @@ const TOOL_DEFINITIONS = {
                     shape: shape,
                     type: type
                 }, () => {
-                    WORKSPACES.reload();
+                    WORKSPACES.reloadMesh();
                 });
             }
         },
         'roof-texture-select': {
             name: "Roof - Select Texture",
-            hotkey: 'shift-R',
+            hotkey: 'shift-%',
             instant: () => {
                 TEXTURE_SELECTION.openBuildingSelection('tools-detail-buildings-roof-list');
             }
@@ -481,7 +604,7 @@ const TOOL_DEFINITIONS = {
                     shape: shape,
                     type: type
                 }, () => {
-                    WORKSPACES.reload();
+                    WORKSPACES.reloadMesh();
                 });
             }
         },
@@ -494,7 +617,31 @@ const TOOL_DEFINITIONS = {
                 post('api/tools/buildings/clear-area/' + WORKSPACES.opened,{
                     selection: tile,
                 }, () => {
-                    WORKSPACES.reload();
+                    WORKSPACES.reloadMesh();
+                });
+            }
+        },
+        'raise-area': {
+            'tool-config': {},
+            name: 'Raise buildings up a floor',
+            select: 'area',
+            on_select: (tile) => {
+                post('api/tools/buildings/raise-area/' + WORKSPACES.opened,{
+                    selection: tile,
+                }, () => {
+                    WORKSPACES.reloadMesh();
+                });
+            }
+        },
+        'lower-area': {
+            'tool-config': {},
+            name: 'Lower buildings up a floor',
+            select: 'area',
+            on_select: (tile) => {
+                post('api/tools/buildings/lower-area/' + WORKSPACES.opened,{
+                    selection: tile,
+                }, () => {
+                    WORKSPACES.reloadMesh();
                 });
             }
         },
@@ -507,7 +654,7 @@ const TOOL_DEFINITIONS = {
                 post('api/tools/buildings/flatten-area/' + WORKSPACES.opened,{
                     selection: tile,
                 }, () => {
-                    WORKSPACES.reload();
+                    WORKSPACES.reloadMesh();
                 });
             }
         },
@@ -516,17 +663,18 @@ const TOOL_DEFINITIONS = {
         'select': {
             'tool-config': {
                 'tools-detail-scenery-selected': true,
+                'tools-detail-scenery-models': true,
             },
             name: 'Scenery - Select',
             select: 'scenery',
             hotkey: 'S',
-            on_select: (scenery) => {
+            on_select: (scenery, cursor) => {
                 if (!scenery) {
                     SCENERY_EDITOR.unselect();
                 } else if (scenery.type === 'scenery') {
-                    SCENERY_EDITOR.selectScenery(scenery.id);
+                    SCENERY_EDITOR.selectScenery(scenery.id, cursor);
                 } else if (scenery.type === 'unique') {
-                    SCENERY_EDITOR.selectUniqueScenery(scenery.id);
+                    SCENERY_EDITOR.selectUniqueScenery(scenery.id, cursor);
                 } else {
                     console.log("Clicked on " + JSON.stringify(scenery));
                 }
@@ -575,12 +723,124 @@ const TOOL_DEFINITIONS = {
             on_select: (tile) => {
             },
         },
+        'center': {
+            name: 'Scenery - Center camera',
+            hotkey: '.',
+            instant: () => {
+                SCENERY_EDITOR.centerCamera();
+            }
+        },
+    },
+    'item': {
+        'select': {
+            'tool-config': {
+                'tools-detail-item-selected': true,
+            },
+            name: 'Item - Select',
+            select: 'item',
+            on_select: (item, cursor) => {
+                if (!item) {
+                } else {
+                    let html = `<p><b>NPC</b>: ${item.item.item}</p> <p><b>Spawn Rate</b>: ${item.spawnRate}</p>`
+
+                    document.getElementById('tools-detail-item-selected-text').innerHTML = html;
+
+                }
+            },
+            dispose: () => SELECTION.removeSceneryCursor()
+        },
+        'place': {
+            'tool-config': {
+                'tools-detail-item-place': true,
+            },
+            name: 'Place Item',
+            select: 'tile',
+            on_select: (tile) => {
+                let item = document.getElementById('tools-detail-item-place-list').value;
+                let spawn_rate = document.getElementById('tools-detail-item-place-spawn_rate').value;
+                let count = document.getElementById('tools-detail-item-place-count').value;
+
+                let def = {
+                    item: item,
+                    layer: WORKSPACES.attached_args.layer,
+                    spawn_rate: spawn_rate,
+                    count: count
+                };
+
+                def.gx = tile.x + WORKSPACES.attached_args.x * 128;
+                def.gy = tile.y + WORKSPACES.attached_args.y * 128;
+
+                post('http://localhost:7780/api/cli/place_item.js', def, (r) => {
+                    WORKSPACES.reloadMesh();
+                });
+            }
+        },
+    },
+    'npc': {
+        'select': {
+            'tool-config': {
+                'tools-detail-npc-selected': true,
+            },
+            name: 'NPC - Select',
+            select: 'npc',
+            on_select: (npc, cursor) => {
+                if (!npc) {
+                } else {
+                    console.log("Clicked on " + JSON.stringify(npc));
+
+                    let html = `<p><b>NPC</b>: ${npc.npc}</p> <p><b>Count</b>: ${npc.capacity}</p>`
+
+                    document.getElementById('tools-detail-npc-selected-text').innerHTML = html;
+
+                }
+            },
+            dispose: () => SELECTION.removeSceneryCursor()
+        },
+        'place': {
+            'tool-config': {
+                'tools-detail-npc-place': true,
+            },
+            name: 'Place NPC',
+            select: 'area',
+            on_select: (area) => {
+                let npc = document.getElementById('tools-detail-npc-place-list').value;
+                let type = document.getElementById('tools-detail-npc-place-wander').value;
+                let count = document.getElementById('tools-detail-npc-place-count').value;
+
+                let def = {
+                    npc: npc,
+                    layer: WORKSPACES.attached_args.layer,
+                    wander: type,
+                    spawn_rate: 60,
+                    count: count,
+                };
+
+                if (type == 'circle') {
+                    def.gx = Math.floor((area.maxx - area.minx) / 2.0) + area.minx;
+                    def.gy = Math.floor((area.maxy - area.miny) / 2.0) + area.miny;
+                    def.w = Math.floor((area.maxy - area.miny) / 2.0);
+                } else {
+                    def.gx = area.minx;
+                    def.gy = area.miny;
+                    def.w = area.maxx - area.minx;
+                    def.h = area.maxy - area.miny;
+                }
+
+                def.gx += WORKSPACES.attached_args.x * 128;
+                def.gy += WORKSPACES.attached_args.y * 128;
+
+                post('http://localhost:7780/api/cli/place_npc.js', def, (r) => {
+                    WORKSPACES.reloadMesh();
+                });
+            }
+        },
     }
 }
 
 function batchAction(action) {
     post('api/tools/batch-scenery/' + action + '/' + WORKSPACES.opened,{
-        prefix: document.getElementById('tools-detail-scenery-batch-prefix').value
+        prefix: document.getElementById('tools-detail-scenery-batch-prefix').value,
+        randomize: document.getElementById('tools-detail-scenery-batch-prefix-randomize').value
     }, () => {
         WORKSPACES.reload();
     });
@@ -740,6 +1000,10 @@ class Tools {
             SELECTION.setFixedAreaMode(toolDefinition.on_select);
         } else if (toolDefinition.select === 'scenery') {
             SELECTION.setSceneryMode(toolDefinition.on_select);
+        } else if (toolDefinition.select === 'npc') {
+            SELECTION.setNPCMode(toolDefinition.on_select);
+        } else if (toolDefinition.select === 'item') {
+            SELECTION.setItemMode(toolDefinition.on_select);
         }
 
         if (toolDefinition.init) toolDefinition.init();
