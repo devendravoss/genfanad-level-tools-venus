@@ -1,0 +1,583 @@
+<html>
+	<head>
+        <meta charset=utf-8>
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+        <link rel="stylesheet" href="/external/ide.css">
+        <link rel="stylesheet" href="/external/easyui.css">
+        <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+        <link rel="stylesheet" href="styles.css">
+
+        <script
+            src="https://code.jquery.com/jquery-3.4.1.js"
+            integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+            crossorigin="anonymous"></script>
+
+        <script src="external/jquery.easyui.min.js"></script>
+
+        <script src="/external/js/imports/three.js"></script>
+        <script src="/external/js/imports/inflate.min.js"></script>
+        <script src="/external/js/imports/OBJLoader.js"></script>
+        <script src="/external/js/imports/FBXLoader.js"></script>
+		<script src="/external/js/imports/MTLLoader.js"></script>
+        <script src="/external/js/imports/ZipLoader.min.js"></script>
+        <script src="/external/js/imports/OrbitControls.js"></script>
+        <script src="/external/js/imports/TransformControls.js"></script>
+
+        <script src="client/terrain/mesh.js"></script>
+        <script src="client/terrain/scenery.js"></script>
+
+        <script src="client/main.js"></script>
+        <script src="client/scene.js"></script>
+        <script src="client/workspaces.js"></script>
+        <script src="client/maps.js"></script>
+        <script src="client/selection.js"></script>
+        <script src="client/tools.js"></script>
+
+        <script src="client/models/model_editor.js"></script>
+        <script src="client/models/model_visual.js"></script>
+        <script src="client/models/scenery_editor.js"></script>
+        <script src="client/models/texture_selection.js"></script>
+    </head>
+
+    <body>
+        <div class="easyui-layout" style="width:100%;height:100%;">
+            <div data-options="region:'north'">
+                <div><b>Map Editing Tools</b> - Currently open: <span id='currently-open'>(none)</span></div>
+                <div>
+                    <input type='button' value='Open Folder...' onclick='WORKSPACES.systemOpen()'>
+                    |
+                    <input type='button' value='Undo' onclick='TOOLS.pickTool("editor", "undo")'>
+                    <input type='button' value='Redo' onclick='TOOLS.pickTool("editor", "redo")'>
+                    |
+                    <input id='file-reload' type='button' value='Reload' onclick='WORKSPACES.reload()' />
+                    Selected tool: <span id='tool-selected'>None</span>
+                </div>
+            </div>
+            <div data-options="region:'west',split:true" title="Maps" style="width:25%">
+                <div id='file-workspaces-view'>
+                    <div>
+                        <input id='file-new' type='button' value='New' onclick='WORKSPACES.create()' />
+                        <input id='file-open' type='button' value='Open...' onclick='WORKSPACES.open()' disabled />
+                        <input id='file-save' type='button' value='Export' onclick='WORKSPACES.save()' disabled />
+                    </div>
+                    <div>
+                        <ul id='file-workspaces' class="easyui-datalist" title="Open Workspaces" lines="true">
+                        </ul>
+                    </div>
+                </div>
+                <div id='file-attached-view'>
+                    <div id='file-attached-location'>
+                        <p>
+                        Layer: <select id='file-attached-layer'>
+                            <option value='world'>World</option>
+                            <option value='world1'>Second Floors</option>
+                            <option value='world2'>Third Floor</option>
+                            <option value='dungeon'>Dungeon</option>
+                            <option value='fairy'>Fae</option>
+                            <option value='debug'>Debug</option>
+                        </select>
+                        X: <input id='file-attached-x' size=2 value='0' />
+                        Y: <input id='file-attached-y' size=2 value='0' />
+                        </p>
+                        <p>
+                            <input id='file-attached-open' type='button' value='Load' />
+                        </p>
+                    </div>
+                    <div id='file-attached-navigation'>
+                        <p>
+                            Navigate:
+                            <input id='file-attached-navigate-N' type='button' value='N' />
+                            <input id='file-attached-navigate-S' type='button' value='S' />
+                            <input id='file-attached-navigate-E' type='button' value='E' />
+                            <input id='file-attached-navigate-W' type='button' value='W' />
+                            <input id='file-attached-navigate-UP' type='button' value='Up' />
+                            <input id='file-attached-navigate-DOWN' type='button' value='Down' />
+                        </p>
+                    </div>
+                    <div id='file-attached-tools'>
+                        Modify: 
+                        <input id='file-attached-import' type='button' value='Import' disabled />
+                        <input id='file-attached-export' type='button' value='Export' disabled />
+                    </div>'
+                </div>
+            </div>
+            <div data-options="region:'east',split:true" style="width:25%">
+                <div class="easyui-layout" style="height:100%">
+                    <div data-options="region:'north', split:true" style="height:20%">
+                        <ul id='layers-list' class='easyui-tree' data-options="checkbox:true">
+                            <li id='layer-grid'>Grid</li>
+                            <li id='layer-collision'>Collision</li>
+                            <li id='layer-terrain' checked>Terrain</li>
+                            <li id='layer-buildings' checked data-options="state:'closed'">
+                                <span>Buildings</span>
+                                <ul>
+                                <li id='layer-walls' checked>Walls</li>
+                                <li id='layer-roofs' checked>Roofs / Higher Floors</li>
+                                </ul>
+                            </li>
+                            <li id='layer-scenery' checked data-options="state:'closed'">
+                                <span>Scenery</span>
+                                <ul>
+                                    <li id='layer-scenery-trees' checked>Trees</li>
+                                    <li id='layer-scenery-skills' checked>Skills</li>
+                                    <li id='layer-scenery-decoration' checked>Decoration</li>
+                                    <li id='layer-scenery-misc' checked>Miscellaneous</li>
+                                    <li id='layer-scenery-unique' checked>Unique</li>
+                                </ul>
+                            </li>
+                            <li id='layer-npc'>NPC Spawns</li>
+                            <li id='layer-item'>Item Spawns</li>
+                            <li id='layer-water'>Water</li>
+                        </ul>
+                    </div>
+                    <div id='tools-choice' data-options="region:'center', split:true" style="height:40%">
+                        <div style="display: flex; margin: 5px 0;">
+                            <span style="margin-right: 5px;">Camera:</span>
+                            <div>
+                                <div>
+                                    <input type='button' value='Move' class="button-group active" onclick='TOOLS.pickTool("default", "move", this)'>
+                                    <input type='button' value='Overhead' class="button-click" onclick='TOOLS.pickTool("default", "overhead", this)'>
+                                </div>
+                                <div>
+                                    <input type='button' value='Perspective' class="button-group-projection-mode active" onclick='TOOLS.pickTool("camera-projection", "perspective", this)'>
+                                    <input type='button' value='Orthographic' class="button-group-projection-mode inactive" onclick='TOOLS.pickTool("camera-projection", "orthographic", this)'>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <input type='button' value='Model Editor' class="button-single" onclick='TOOLS.pickTool("default", "model_editor", this)'>
+                            <input type='button' value='Hotkeys' class="button-single" onclick='TOOLS.pickTool("default", "hotkeys", this)'>
+                        </div>
+                        <div class="easyui-accordion">
+                            <div title="Editor">
+                                <div>
+                                    <input type='button' value='Copy' class="button-group inactive" onclick='TOOLS.pickTool("editor", "copy", this)'>
+                                    <input type='button' value='Cut' class="button-group inactive" onclick='TOOLS.pickTool("editor", "cut", this)'>
+                                    <input type='button' value='Paste' class="button-group inactive" onclick='TOOLS.pickTool("editor", "paste", this)'>
+                                </div>
+                                <div>
+                                    Clipboard:
+                                    <input type='button' value='Save To' class="button-click" onclick='TOOLS.pickTool("editor", "save-clipboard", this)'>
+                                    <input type='button' value='Load From' class="button-click" onclick='TOOLS.pickTool("editor", "load-clipboard", this)'>
+                                </div>
+                            </div>
+                            <div title="Mesh">
+                                <div>
+                                    <input type='button' value='Save Color' class="button-click" onclick='TOOLS.pickTool("color", "save", this)'>
+                                    <input type='button' value='Load Color' class="button-click" onclick='TOOLS.pickTool("color", "load", this)'>
+                                </div>
+                                <div>
+                                    <input type='button' value='Load/Save Heightmap' class="button-group inactive" onclick='TOOLS.pickTool("height", "image", this)' />
+                                </div>
+                                <div>
+                                    <input type='button' value='Elevation Brush' class="button-group inactive" onclick='TOOLS.pickTool("height", "brush", this)'>
+                                </div>
+                                <div>
+                                    <input type='button' value='Toggle Unwalkable' class="button-group inactive" onclick='TOOLS.pickTool("height", "walkability", this)'>
+                                </div>
+                                <div>
+                                    <input type='button' value='Flatten Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "flatten-area", this)'>
+                                </div>
+                            </div> 
+                            <div title="Buildings">
+                                <div>
+                                    Floor: 
+                                    <input type='button' value='Tile' class="button-group inactive"  onclick='TOOLS.pickTool("building", "floor-tile", this)'>
+                                    <!--<input type='button' value='Line' class="button-group inactive" onclick='TOOLS.pickTool("building", "floor-line", this)'>-->
+                                    <input type='button' value='Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "floor-area", this)'>
+                                </div>
+                                <div>
+                                    Wall: 
+                                    <input type='button' value='Line' class="button-group inactive" onclick='TOOLS.pickTool("building", "wall-line", this)'>
+                                    <input type='button' value='Square' class="button-group inactive" onclick='TOOLS.pickTool("building", "wall-area", this)'>
+                                </div>
+                                <div>
+                                    Roof: 
+                                    <input type='button' value='Tile' class="button-group inactive" onclick='TOOLS.pickTool("building", "roof-tile", this)'>
+                                    <!--<input type='button' value='Line' class="button-group inactive" onclick='TOOLS.pickTool("building", "roof-line", this)'>-->
+                                    <input type='button' value='Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "roof-area", this)'>
+                                </div>
+                                <div>
+                                    <input type='button' value='Clear Area' class="button-group inactive" onclick='TOOLS.pickTool("building", "clear-area", this)'>
+                                </div>
+                                <div>
+                                    <input type='button' value='Batch Edit' class="button-group inactive" onclick='TOOLS.pickTool("building", "batch", this)'>
+                                </div>
+                            </div>
+                            <div title="Scenery">
+                                <div>
+                                    <input type='button' value='Select' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "select", this)'>
+                                </div>
+                                <div>
+                                    <input type='button' value='Place Tile' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "place", this)'>
+                                    <input type='button' value='Place Unique' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "place-unique", this)'>
+                                </div>
+                                <div>
+                                    <input type='button' value='Batch Edit' class="button-group inactive" onclick='TOOLS.pickTool("scenery", "batch", this)'>
+                                </div>
+                            </div>
+                            <div title="NPCs/Items">
+                                <div>
+                                    <input disabled type='button' value='Select NPC' class="button-group inactive" onclick='TOOLS.pickTool("npc", "select", this)'>
+                                    <input disabled type='button' value='Place New NPC' class="button-group inactive" onclick='TOOLS.pickTool("npc", "place", this)'>
+                                </div>
+                                <div>
+                                    <input disabled type='button' value='Select Item' class="button-group inactive" onclick='TOOLS.pickTool("item", "select", this)'>
+                                    <input disabled type='button' value='Place New Item' class="button-group inactive" onclick='TOOLS.pickTool("item", "place", this)'>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id='tools-detail' data-options="region:'south', split:true" style="height:40%">
+                        <div id='tools-detail-unselected'>Select a tool.</div>
+                        <div id='tools-copy-choices' class='hidden'>
+                            <div>Choose which parts of the map you wish to copy.</div>
+                            <div>
+                                <input type='button' value='All' onclick='copyCheck(true)' />
+                                <input type='button' value='None' onclick='copyCheck(false)' />
+                            </div>
+                            <div id='tools-copy-list'>
+                                <p>
+                                    <input id='tools-copy-color' type='checkbox' checked />
+                                    <label for='tools-copy-color'>Color</label>
+                                </p>
+                                <p>
+                                    <input id='tools-copy-height' type='checkbox' checked />
+                                    <label for='tools-copy-height'>Height</label>
+                                </p>
+                                <p>
+                                    <input id='tools-copy-buildings' type='checkbox' checked />
+                                    <label for='tools-copy-buildings'>Buildings</label>
+                                </p>
+                                <p>
+                                    <input id='tools-copy-scenery' type='checkbox' checked />
+                                    <label for='tools-copy-scenery'>Scenery</label>
+                                </p>
+                            </div>
+                        </div>
+                        <div id='tools-detail-height' class='hidden'>
+                            <div>
+                                Edits height directly. 
+
+                                Set min and max to clamp (empty = unset) the brush to a specific elevation value. 
+                            </div>
+                            <div>
+                                Brush Size: 
+                                <input type='number' id='tools-detail-height-size' value='1' min="1" max="25"/>
+                                <input type='button' value='1' onclick="document.getElementById('tools-detail-height-size').value = 1; updateHeightBrush();" />
+                                <input type='button' value='3' onclick="document.getElementById('tools-detail-height-size').value = 3; updateHeightBrush();" />
+                                <input type='button' value='5' onclick="document.getElementById('tools-detail-height-size').value = 5; updateHeightBrush();" />
+                                <input type='button' value='7' onclick="document.getElementById('tools-detail-height-size').value = 7; updateHeightBrush();" />
+                            </div>
+                            <div>
+                                Step: <input id='tools-detail-height-step' size=2 value='0.5' />
+                                <input type='button' value='-1.0' onclick="document.getElementById('tools-detail-height-step').value = -1.0;" />
+                                <input type='button' value='-0.5' onclick="document.getElementById('tools-detail-height-step').value = -0.5;" />
+                                <input type='button' value='0.5' onclick="document.getElementById('tools-detail-height-step').value = 0.5;" />
+                                <input type='button' value='1.0' onclick="document.getElementById('tools-detail-height-step').value = 1.0;" />
+                            </div>
+                            <div>
+                                Min: <input id='tools-detail-height-min' size=4 />
+                                Max: <input id='tools-detail-height-max' size=4/>
+                            </div>
+                        </div>
+                        <div id='tools-detail-buildings' class='hidden'>
+                            <div>Building Floor: <select id='tools-detail-buildings-level'>
+                                <option value='0'>Ground</option>
+                                <option value='1'>Second Floor</option>
+                                <option value='2'>Third Floor</option>
+                                <option value='3'>Fourth Floor</option>
+                            </select></div>
+                        </div>
+                        <div id='tools-detail-buildings-shape' class='hidden'>
+                            <div>Tile Shape: <select id='tools-detail-buildings-shape-list' onchange="SELECTION.swapCursorShape(document.getElementById('tools-detail-buildings-shape-list').value)">
+                                <option value='full'>Full</option>
+                                <option value='tl'>TL</option>
+                                <option value='tr'>TR</option>
+                                <option value='bl'>BL</option>
+                                <option value='br'>BR</option>
+                            </select></div>
+                        </div>
+                        <div id='tools-detail-buildings-floors' class='hidden'>
+                            Floor: <select id='tools-detail-buildings-floor-list'></select>
+                            <input type='button' value='...' onclick="TEXTURE_SELECTION.openBuildingSelection('tools-detail-buildings-floor-list')">
+                            <input type='button' value='Erase' onclick="clearOption('tools-detail-buildings-floor-list')">
+                        </div>
+                        <div id='tools-detail-buildings-walls' class='hidden'>
+                            Wall: <select id='tools-detail-buildings-wall-list'></select>
+                            <input type='button' value='...' onclick="TEXTURE_SELECTION.openBuildingSelection('tools-detail-buildings-wall-list')">
+                            <input type='button' value='Erase' onclick="clearOption('tools-detail-buildings-wall-list')">
+                        </div>
+                        <div id='tools-detail-buildings-roofs' class='hidden'>
+                            Roof: <select id='tools-detail-buildings-roof-list'></select>
+                            <input type='button' value='...' onclick="TEXTURE_SELECTION.openBuildingSelection('tools-detail-buildings-roof-list')">
+                            <input type='button' value='Erase' onclick="clearOption('tools-detail-buildings-roof-list')">
+                        </div>
+                        <div id='tools-detail-scenery-batch' class='hidden'>
+                            <div>
+                                This tool exports a subset of the scenery into images that can be edited.
+                                The prefix lets you choose which subset of scenery should be selected.
+                            </div>
+                            <div>
+                                Prefix: <input id='tools-detail-scenery-batch-prefix' value='skill-tree-'>
+                            </div>
+                            <div>
+                                <input type='button' value='Save Scenery' onclick='batchAction("scenery-save")' />
+                                <input type='button' value='Load Scenery' onclick='batchAction("scenery-load")' />
+                            </div>
+                            <div>
+                                <input type='button' value='Save Tints' onclick='batchAction("tint-save")' />
+                                <input type='button' value='Load Tints' onclick='batchAction("tint-load")' />
+                            </div>
+                            <div>
+                                <input type='button' value='Randomly Rotate' onclick='batchAction("rotate-randomly")' />
+                            </div>
+                        </div>
+                        <div id='tools-detail-height-mesh' class='hidden'>
+                            <div>
+                                This tool saves and loads the heightmap to a 'height.png' file in the workspace. Leave the numbers blank for default.
+                            </div>
+                            <p>Low (0,0,0): <input id='tools-detail-height-low' value=''></p>
+                            <p>High (255,255,255): <input id='tools-detail-height-high' value=''></p>
+                            <div>
+                                <input type='button' value='Save Height' onclick='saveHeight()'>
+                                <input type='button' value='Load Height' onclick='loadHeight()'>
+                            </div>
+                        </div>
+                        <div id='tools-detail-ground-batch' class='hidden'>
+                            <div>
+                                This tool allows you to edit the ground textures rapidly as tiled maps.
+                                Choose a texture from the list then 'save' will create a tiled file you can edit.
+                                Once done, load it back in.                                
+                            </div>
+                            <div>
+                                <input type='button' value='Save' onclick='batchFloorAction("ground-save")' />
+                                <input type='button' value='Load' onclick='batchFloorAction("ground-load")' />
+                            </div>
+                        </div>
+                        <div id='tools-detail-scenery-models' class='hidden'>
+                            <div>
+                                Model: <select id='tools-detail-scenery-model-list' onchange='SCENERY_EDITOR.modelListChange()'></select>
+                                <input type='button' value='...' onclick="MODEL_VISUAL.showDialog()">
+                                <input type='button' value='Erase' onclick="clearOption('tools-detail-scenery-model-list')">
+                            </div>
+                        </div>
+                        <div id='tools-detail-scenery-selected' class='hidden'>
+                            <div>Selected: <span id='tools-detail-scenery-id'></span></div>
+                        </div>
+                        <div id='tools-detail-scenery-customize' class='hidden'>
+                            <div>Model: <span id='tools-detail-scenery-model'></span>
+                                <input type='button' value='Copy' onclick='SCENERY_EDITOR.copyModel()'/>
+                            </div>
+                            <div>Rotation: <span id='tools-detail-scenery-rotation'></span> 
+                                <input type='button' value='&lt;' onclick='SCENERY_EDITOR.rotateModel(-90)' />
+                                <input type='button' value='&gt;' onclick='SCENERY_EDITOR.rotateModel(90)'/>
+                            </div>
+                            <div>Tint:
+                                <input id='tools-detail-scenery-tint-enabled' type='checkbox' onchange='SCENERY_EDITOR.tintChange()' />
+                                <input id='tools-detail-scenery-tint-color' type='color' value='#ffffff' onchange='SCENERY_EDITOR.tintChange()'/>
+                            </div>
+                        </div>
+                        <div id='tools-detail-scenery-unique' class='hidden'>
+                            <div>Scale: 
+                                X <input id='tools-detail-scenery-unique-scale-x' size=3 value="1.0" onchange='SCENERY_EDITOR.updateUnique()'/> 
+                                Y <input id='tools-detail-scenery-unique-scale-y' size=3 value="1.0" onchange='SCENERY_EDITOR.updateUnique()'/> 
+                                Z <input id='tools-detail-scenery-unique-scale-z' size=3 value="1.0" onchange='SCENERY_EDITOR.updateUnique()'/> 
+                            </div>
+                            <div>Position: 
+                                X <input id='tools-detail-scenery-unique-position-x' size=3 value="0.0" onchange='SCENERY_EDITOR.updateUnique()'/> 
+                                Y <input id='tools-detail-scenery-unique-position-y' size=3 value="0.0" onchange='SCENERY_EDITOR.updateUnique()'/> 
+                                Z <input id='tools-detail-scenery-unique-position-z' size=3 value="0.0" onchange='SCENERY_EDITOR.updateUnique()'/> 
+                            </div>
+                            <div>Rotation: 
+                                X <input id='tools-detail-scenery-unique-rotate-x' size=3 value="0.0" onchange='SCENERY_EDITOR.updateUnique()'/> 
+                                Y <input id='tools-detail-scenery-unique-rotate-y' size=3 value="0.0" onchange='SCENERY_EDITOR.updateUnique()'/> 
+                                Z <input id='tools-detail-scenery-unique-rotate-z' size=3 value="0.0" onchange='SCENERY_EDITOR.updateUnique()'/> 
+                            </div>
+                            <div>
+                                <!--<input type='button' value='Update' onclick='SCENERY_EDITOR.updateUnique()' />-->
+                                <input type='button' value='Save' onclick='SCENERY_EDITOR.saveUnique()' />
+                                |
+                                <input type='button' value='Reset' onclick='SCENERY_EDITOR.resetUnique()' />
+                            </div>
+                        </div>
+                        <div id='tools-detail-scenery-delete' class='hidden'>
+                            <hr />
+                            <div>
+                                <input type='button' style='color: red' value='Delete' onclick='SCENERY_EDITOR.deleteModel()'/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id='center' data-options="region:'center'">
+            </div>
+            <div data-options="region:'south',split:true" style="height:50px">
+                <p id='footer'></p>
+            </div>
+        </div>
+
+        <div id="model-dialog" title="Model Editor" style="width:80%; height:80%;" data-options="modal:true">
+            <div class="easyui-layout" style="width:100%; height:100%;">
+                <div data-options="region:'west',split:true" style="width:34%;">
+
+<div class='easyui-tabs' style='height: 100%'>
+    <div title='Assets'>
+        <div>
+            Asset Pack: <select id='model-dialog-asset-pack-list'></select>
+            <input type='button' value='Load' onclick='MODEL_EDITOR.loadAssetPack()'>
+        </div>
+        <div>Filter: <input id='model-dialog-asset-filter' size=10 onchange="$('#model-dialog-asset-list').tree('doFilter', document.getElementById('model-dialog-asset-filter').value);"> 
+            <input type='button' value='Expand' onclick="$('#model-dialog-asset-list').tree('expandAll');">
+            <input type='button' value='Collapse' onclick="$('#model-dialog-asset-list').tree('collapseAll');">
+            </div>
+        <ul id='model-dialog-asset-list-container'>
+        </ul>
+    </div>
+    <div title='Scenery'>
+        <div>Filter: <input id='model-dialog-filter' size=10 onchange="$('#model-dialog-list').tree('doFilter', document.getElementById('model-dialog-filter').value);"> 
+            <input type='button' value='Expand' onclick="$('#model-dialog-list').tree('expandAll');">
+            <input type='button' value='Collapse' onclick="$('#model-dialog-list').tree('collapseAll');">
+            </div>
+        <ul id='model-dialog-list-container'>
+        </ul>
+    </div>
+</div>
+
+                </div>
+                <div data-options="region:'center'" style="width:66%;">
+                    <div class="easyui-layout" style="width:100%; height:100%;">
+                        <div id='model-dialog-preview' data-options="region:'center'" style="height:66%;">
+                            
+                        </div>
+                        <div data-options="region:'south',split:true" style="height:40%;">
+            <div class="easyui-layout" style="width:100%; height:100%;">
+                <div data-options="region:'center'">
+                    <!--
+                    <div id='model-dialog-controls-warning'>This model is not editable. <input type='button' value='Copy to new' /></div>
+                    -->
+                    <div id='model-dialog-controls'>
+                        <div>
+                            Name: <input id='model-dialog-controls-name' value='Box' onchange="MODEL_EDITOR.uiChange()"/>
+                        </div>
+                        <div>
+                            Examine: <input id='model-dialog-controls-examine' value='Examine' onchange="MODEL_EDITOR.uiChange()"/>
+                        </div>
+                        <div>Scale: 
+                            X <input id='model-dialog-controls-scale-x' size=3 value="1.0" onchange="MODEL_EDITOR.uiChange()"/> 
+                            Y <input id='model-dialog-controls-scale-y' size=3 value="1.0" onchange="MODEL_EDITOR.uiChange()"/> 
+                            Z <input id='model-dialog-controls-scale-z' size=3 value="1.0" onchange="MODEL_EDITOR.uiChange()"/> 
+                        </div>
+                        <div>Offset: 
+                            X <input id='model-dialog-controls-offset-x' size=3 value="0.0" onchange="MODEL_EDITOR.uiChange()"/> 
+                            Y <input id='model-dialog-controls-offset-y' size=3 value="0.0" onchange="MODEL_EDITOR.uiChange()"/> 
+                            Z <input id='model-dialog-controls-offset-z' size=3 value="0.0" onchange="MODEL_EDITOR.uiChange()"/> 
+                        </div>
+                        <div>Texture:
+                            <select id='model-dialog-controls-texture' onchange="MODEL_EDITOR.textureChange()">
+                            </select>
+                        </div>
+                        <div>Dimensions:
+                            <select id="model-dialog-controls-dimensions" onchange="MODEL_EDITOR.uiChange()">
+                                <option selected value="1x1" />1x1</option>
+                                <option value="2x1" />2x1</option>
+                                <option value="3x1" />3x1</option>
+                                <option value="1x2" />1x2</option>
+                                <option value="2x2" />2x2</option>
+                                <option value="2x3" />2x3</option>
+                            </select>
+                        </div>
+                        <div>Resize:
+                            <input type='button' value='Fit' onclick='MODEL_EDITOR.scaleFit()'> |
+                            <select id='model-dialog-controls-scale'>
+                                    <option value="0.001" />0.001</option>
+                                    <option value="0.002" />0.002</option>
+                                    <option value="0.003" />0.003</option>
+                                    <option value="0.004" />0.004</option>
+                                    <option value="0.005" />0.005</option>
+                                    <option value="0.006" />0.006</option>
+                                    <option value="0.007" />0.007</option>
+                                    <option value="0.008" />0.008</option>
+                                    <option value="0.009" />0.009</option>
+                                    <option value="0.01" />0.01</option>
+                                    <option value="0.02" />0.02</option>
+                                    <option value="0.03" />0.03</option>
+                                    <option value="0.04" />0.04</option>
+                                    <option value="0.05" />0.05</option>
+                                    <option value="0.06" />0.06</option>
+                                    <option value="0.07" />0.07</option>
+                                    <option value="0.08" />0.08</option>
+                                    <option value="0.09" />0.09</option>
+                                    <option value="0.1" />0.1</option>
+                                    <option value="0.2" />0.2</option>
+                                    <option value="0.3" />0.3</option>
+                                    <option value="0.4" />0.4</option>
+                                    <option value="0.5" />0.5</option>
+                                    <option value="0.75" />0.75</option>
+                                    <option value="0.9" />0.9</option>
+                                    <option selected value="1.0" />1.0</option>
+                                    <option value="1.1" />1.1</option>
+                                    <option value="1.25" />1.25</option>
+                                    <option value="1.5" />1.5</option>
+                                    <option value="2.0" />2.0</option>
+                                    <option value="5.0" />5.0</option>
+                                    <option value="7.5" />7.5</option>
+                                    <option value="10.0" />10.0</option>
+                            </select>
+                            <input type='button' value='ABS' onclick='MODEL_EDITOR.scaleAbsolute()'>
+                            <input type='button' value='%' onclick='MODEL_EDITOR.scalePercent()'>
+                        </div>
+                        <div>
+                            Reposition:
+                            <input type='button' value='Origin' onclick='MODEL_EDITOR.repositionOrigin()'>
+                            <input type='button' value='Tile Center' onclick='MODEL_EDITOR.repositionCenter()'>
+                            <input type='button' value='X' onclick='MODEL_EDITOR.repositionX()'>
+                            <input type='button' value='Z' onclick='MODEL_EDITOR.repositionZ()'>
+                        </div>
+                        <div>
+                            Save:
+                            <input type='button' value='Save' onclick="MODEL_EDITOR.saveChanges()">
+                            <input type='button' value='Reset' onclick="MODEL_EDITOR.resetUI()">
+                        </div>
+                    </div>
+                </div>
+                <div data-options="region:'east',split:true" style="width:50%">
+                    <p>
+                        <input type='button' value='Camera' onclick="MODEL_EDITOR.controlCamera()" />
+                        <input type='button' disabled value='Scale' onclick="MODEL_EDITOR.controlScale()" />
+                        <input type='button' disabled value='Translate' onclick="MODEL_EDITOR.controlTranslate()" />
+                        <input type='button' disabled value='Rotate' onclick="MODEL_EDITOR.controlRotate()" />
+                    </p>
+                    <p id='model-dialog-info'>
+                        Info Text
+                    </p>
+                    <p>
+                        <input type='button' value='Reset Camera'  onclick="MODEL_EDITOR.resetCamera()" />
+                    </p>
+                    <p><input id='model-dialog-select' type='button' value='Close and Select' style='color: white; background-color: green;' onclick="MODEL_EDITOR.selectAndClose()">(Shift+Enter)</p>
+                </div>
+            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                        </div>
+
+
+        <div id='model-visual-dialog' class="easyui-dialog" data-options="closed: true" title="Select a Model" style="width:80%; height:80%;">
+            <h2>Recent</h2>
+            <div id='model-visual-recent'>
+
+            </div>
+            <h2>All</h2>
+            <div id='model-visual-all'>
+
+            </div>
+        </div>
+
+        <div id="buildings-dialog" class="easyui-dialog" data-options="closed: true"title="Buildings Selection" style="width:80%; height:80%;">
+            
+        </div>
+    </body>
+</html>
