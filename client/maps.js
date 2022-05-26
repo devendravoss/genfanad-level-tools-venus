@@ -177,38 +177,39 @@ class MapLoader {
             for (let k in map.unique) {
                 let m = map.unique[k];
                 
-                // TODO: This is a bit hacky.
-                let stripImport = m.model.substring(m.model.indexOf('/') + 1);
-                m.model = stripImport.replaceAll(/-/g, '/');
-                m.texture = 'models/' + m.texture;
-
-                modelLoader.loadModel(m, (mesh) => {
+                sceneryLoader.createUnique(m, (mesh) => {
                     let globalMesh = new THREE.Group();
-                    globalMesh.name = k;
-                    
-                    globalMesh.scale.set(m.scale.x, m.scale.y, m.scale.z);
-                    globalMesh.position.set(N(m.position.x) , N(m.position.y), N(m.position.z));
-                    
                     let rotationMesh = new THREE.Group();
+
+                    globalMesh.name = k;
                     rotationMesh.add(mesh);
                     globalMesh.add(rotationMesh);
 
-                    // TODO: This doesn't quite work properly.
-                    if(typeof(m?.rotation) == 'number') {
-                        rotationMesh.rotateY(THREE.Math.degToRad(N(m.rotation)));
-                    } else if (m ?. rotation ?. x || m ?. rotation ?. y || m ?. rotation ?. z) {
-                        rotationMesh.rotation.set(
-                            THREE.Math.degToRad(m ?. rotation ?. x || 0.0),
-                            THREE.Math.degToRad(m ?. rotation ?. y || 0.0),
-                            THREE.Math.degToRad(m ?. rotation ?. z || 0.0),
-                        )
+                    globalMesh.position.set(
+                        m ?. position ?. x || 0.0,
+                        m ?. position ?. y || 0.0,
+                        m ?. position ?. z || 0.0
+                    );
+                    
+                    if (typeof (m?.rotation) == 'number') {
+                      rotationMesh.rotateY(THREE.Math.degToRad(N(m.rotation)));
+                    } else if (m?.rotation?.x || m?.rotation?.y || m?.rotation?.z) {
+                      rotationMesh.rotation.set(
+                        THREE.Math.degToRad(m?.rotation?.x || 0.0),
+                        THREE.Math.degToRad(m?.rotation?.y || 0.0),
+                        THREE.Math.degToRad(m?.rotation?.z || 0.0),
+                      )
                     }
-
+          
                     rotationMesh.updateMatrix();
                     globalMesh.updateMatrix();
+
+                    if (m.tint) {
+                        tintMesh(m.tint, mesh);
+                    }
     
                     workspace.scenery_groups['unique'].add(globalMesh);
-                    globalMesh.original_id = { type: 'unique', id: k };
+                    mesh.original_id = { type: 'unique', id: k };
 
                     workspace.unique_references[k] = {
                         instance: m,
@@ -287,36 +288,39 @@ class MapLoader {
             for (let k in loadedUniques) {
                 let m = loadedUniques[k];
 
-                let stripImport = m.model.substring(m.model.indexOf('/') + 1);
-                m.model = stripImport.replaceAll(/-/g, '/');
-                m.texture = 'models/' + m.texture;
-                
-                WORKSPACES.current_map.modelLoader.loadModel(m, (mesh) => {
+                WORKSPACES.current_map.sceneryLoader.createUnique(m, (mesh) => {
                     let globalMesh = new THREE.Group();
                     globalMesh.name = k;
-                    
-                    globalMesh.scale.set(m.scale.x, m.scale.y, m.scale.z);
-                    globalMesh.position.set(N(m.position.x) , N(m.position.y), N(m.position.z));
-                    
+
                     let rotationMesh = new THREE.Group();
                     rotationMesh.add(mesh);
                     globalMesh.add(rotationMesh);
 
-                    if(typeof(m?.rotation) == 'number') {
-                        rotationMesh.rotateY(THREE.Math.degToRad(N(m.rotation)));
-                    } else if (m ?. rotation ?. x || m ?. rotation ?. y || m ?. rotation ?. z) {
-                        rotationMesh.rotation.set(
-                            THREE.Math.degToRad(m ?. rotation ?. x || 0.0),
-                            THREE.Math.degToRad(m ?. rotation ?. y || 0.0),
-                            THREE.Math.degToRad(m ?. rotation ?. z || 0.0),
-                        )
+                    globalMesh.position.set(
+                        m ?. position ?. x || 0.0,
+                        m ?. position ?. y || 0.0,
+                        m ?. position ?. z || 0.0
+                    );
+          
+                    if (typeof (m?.rotation) == 'number') {
+                      rotationMesh.rotateY(THREE.Math.degToRad(N(m.rotation)));
+                    } else if (m?.rotation?.x || m?.rotation?.y || m?.rotation?.z) {
+                      rotationMesh.rotation.set(
+                        THREE.Math.degToRad(m?.rotation?.x || 0.0),
+                        THREE.Math.degToRad(m?.rotation?.y || 0.0),
+                        THREE.Math.degToRad(m?.rotation?.z || 0.0),
+                      )
                     }
-
+          
                     rotationMesh.updateMatrix();
                     globalMesh.updateMatrix();
+
+                    if (m.tint) {
+                        tintMesh(m.tint, mesh);
+                    }
     
                     uniques.group.add(globalMesh);
-                    globalMesh.original_id = { type: 'unique', id: k };
+                    mesh.original_id = { type: 'unique', id: k };
 
                     uniques.references[k] = {
                         instance: m,

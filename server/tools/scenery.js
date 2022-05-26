@@ -269,13 +269,6 @@ function placeUnique(workspace, body) {
         files: {'/unique.json': uniques},
     })
 
-    // This will throw an approximation of this object as a unique model into the map.
-    let position = {
-        x: body.x || 0.0,
-        y: body.elevation || 0.0,
-        z: body.z || 0.0
-    };
-
     let pieces = body.object.split('-');
     let name = pieces.pop();
     let path = pieces.join('/') + "/";
@@ -284,7 +277,14 @@ function placeUnique(workspace, body) {
         fs.readFileSync(
             WORKSPACE.getModelDefinitionPath(workspace) + path + name + ".json"));
 
-    let key = body.x + "," + body.z + "," + name;
+    // This will throw an approximation of this object as a unique model into the map.
+    let position = {
+        x: Number(body.x) || 0.0,
+        y: Number(body.elevation) || 0.0,
+        z: Number(body.z) || 0.0
+    };
+
+    let key = body.x + "," + body.z + "," + body.object;
 
     if (uniques[key]) throw "Unique " + key + ' already exists.';
 
@@ -293,8 +293,9 @@ function placeUnique(workspace, body) {
         examine: definition.examine,
         scale: definition.scale,
         position: position,
-        model: 'imported/' + pieces.join('-') + '-' + definition.model,
-        texture: 'shared-textures/' + definition.sharedTexture,
+        //model: 'imported/' + pieces.join('-') + '-' + definition.model,
+        //texture: 'shared-textures/' + definition.sharedTexture,
+        scenery_key: body.object
     }
 
     WORKSPACE.writeUnique(workspace, uniques);
